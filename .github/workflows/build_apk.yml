@@ -11,21 +11,25 @@ jobs:
       # 1. Baixa o código do seu repositório
       - uses: actions/checkout@v4
 
-      # 2. Configura a versão exata do Flutter compatível com seu código
+      # 2. Configura a versão estável do Flutter compatível com seu código
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.9' # Versão que aceita o código do seu app
+          flutter-version: '3.16.9'
 
-      # 3. Baixa as dependências do pubspec
+      # 3. Ajusta o wakelock_plus para uma versão compatível com o Dart 3.2.6
+      - name: Ajustar dependência do Wakelock
+        run: flutter pub add wakelock_plus:1.1.4 --offline
+
+      # 4. Baixa as dependências do pubspec
       - name: Install dependencies
         run: flutter pub get
 
-      # 4. Compila o APK pulando validações rígidas de Gradle moderno
+      # 5. Compila o APK pulando validações rígidas de Gradle moderno
       - name: Build APK
         run: flutter build apk --debug --android-skip-build-dependency-validation
 
-      # 5. Salva o APK gerado para você baixar
+      # 6. Salva o APK gerado para você baixar
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
