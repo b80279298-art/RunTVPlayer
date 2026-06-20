@@ -1,0 +1,5 @@
+-keep class com.runtv.player.** { *; }
+-keep class io.flutter.** { *; }
+-dontwarn io.flutter.**
+-keep class media_kit.** { *; }
+-dontwarn media_kit.**
