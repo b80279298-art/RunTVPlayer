@@ -40,9 +40,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # 6. Compila o APK
+      # 6. Compila o APK usando o comando limpo compatível com Flutter 3.16
       - name: Build APK
-        run: flutter build apk --debug --android-skip-build-dependency-validation
+        run: flutter build apk --debug
 
       # 7. Salva o APK gerado para você baixar
       - name: Upload APK
@@ -50,3 +50,4 @@ jobs:
         with:
           name: app-debug
           path: build/app/outputs/flutter-apk/*.apk
+
