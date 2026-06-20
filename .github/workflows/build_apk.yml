@@ -8,48 +8,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Baixa o código do seu repositório
+      # 1. Baixa o seu código
       - uses: actions/checkout@v4
 
-      # 2. Configura a versão estável do Flutter compatível com seu código
+      # 2. Configura a versão correta do Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.16.9'
 
-      # 3. Remove os metadados do Embedding V1 e força o V2 no AndroidManifest e nas classes
-      - name: Forçar Android Embedding V2 Completo
+      # 3. Reconstrói a pasta Android do zero no padrão moderno (V2)
+      - name: Recriar estrutura Android Limpa
         run: |
-          echo "Atualizando AndroidManifest.xml..."
-          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          
-          if [ -f "$MANIFEST_PATH" ]; then
-            # Remove a tag antiga do Flutter Embedding V1 que bloqueia o Media Kit
-            sed -i '/android:name="io.flutter.app.FlutterApplication"/d' "$MANIFEST_PATH"
-            sed -i '/android:name="io.flutter.embedding.android.SplashScreenDrawable"/d' "$MANIFEST_PATH"
-          fi
-
-          echo "Recriando caminhos das atividades..."
-          # Garante que as pastas corretas existam e injeta as MainActivities limpas no formato V2
-          mkdir -p android/app/src/main/kotlin/com/example/runtv_player
-          cat << 'EOF' > android/app/src/main/kotlin/com/example/runtv_player/MainActivity.kt
-          package com.example.runtv_player
-
-          import io.flutter.embedding.android.FlutterActivity
-
-          class MainActivity: FlutterActivity() {
-          }
-          EOF
-
-          mkdir -p android/app/src/main/java/com/example/runtv_player
-          cat << 'EOF' > android/app/src/main/java/com/example/runtv_player/MainActivity.java
-          package com.example.runtv_player;
-
-          import io.flutter.embedding.android.FlutterActivity;
-
-          public class MainActivity extends FlutterActivity {
-          }
-          EOF
+          echo "Deletando pasta antiga e gerando uma nova com suporte nativo a V2..."
+          rm -rf android
+          flutter create . --platforms=android
 
       # 4. Ajusta o wakelock_plus para uma versão compatível com o Dart 3.2.6
       - name: Ajustar dependência do Wakelock
@@ -59,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # 6. Compila o APK pulando validações rígidas de Gradle moderno
+      # 6. Compila o APK
       - name: Build APK
         run: flutter build apk --debug --android-skip-build-dependency-validation
 
