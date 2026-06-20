@@ -17,16 +17,14 @@ jobs:
         with:
           flutter-version: '3.16.9'
 
-      # 3. Corrige o arquivo do Android para usar o Embedding V2 exigido pelo Media Kit
-      - name: Migrar para Android Embedding V2
+      # 3. Força a migração do Android embedding para V2 recriando os arquivos principais
+      - name: Migrar na Força para Android Embedding V2
         run: |
-          cd android/app/src/main/kotlin
-          # Procura e entra na pasta do seu pacote dinamicamente
-          PACKAGE_DIR=$(find . -name "MainActivity.kt" -exec dirname {} \;)
-          if [ -n "$PACKAGE_DIR" ]; then
-            cd "$PACKAGE_DIR"
-            echo "Migrando MainActivity.kt..."
-            cat << 'EOF' > MainActivity.kt
+          echo "Limpando estruturas antigas e criando arquivos compatíveis com v2..."
+          
+          # Garante que a pasta kotlin existe e cria uma MainActivity universal
+          mkdir -p android/app/src/main/kotlin/com/example/runtv_player
+          cat << 'EOF' > android/app/src/main/kotlin/com/example/runtv_player/MainActivity.kt
           package com.example.runtv_player
 
           import io.flutter.embedding.android.FlutterActivity
@@ -34,8 +32,17 @@ jobs:
           class MainActivity: FlutterActivity() {
           }
           EOF
-          fi
-        continue-on-error: true
+
+          # Garante que se houver uma versão em Java antiga, ela não vai conflitar
+          mkdir -p android/app/src/main/java/com/example/runtv_player
+          cat << 'EOF' > android/app/src/main/java/com/example/runtv_player/MainActivity.java
+          package com.example.runtv_player;
+
+          import io.flutter.embedding.android.FlutterActivity;
+
+          public class MainActivity extends FlutterActivity {
+          }
+          EOF
 
       # 4. Ajusta o wakelock_plus para uma versão compatível com o Dart 3.2.6
       - name: Ajustar dependência do Wakelock
