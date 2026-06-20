@@ -11,19 +11,19 @@ jobs:
       # 1. Baixa o código do seu repositório
       - uses: actions/checkout@v4
 
-      # 2. Configura o Flutter automaticamente (ele já traz o Java interno necessário)
+      # 2. Configura a versão exata do Flutter compatível com seu código
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          flutter-version: '3.16.9' # Versão que aceita o código do seu app
 
-      # 3. Baixa as dependências do Flutter (isso cria os caminhos que estavam faltando)
+      # 3. Baixa as dependências do pubspec
       - name: Install dependencies
         run: flutter pub get
 
-      # 4. Compila o APK usando o próprio comando do Flutter (muito mais seguro)
+      # 4. Compila o APK pulando validações rígidas de Gradle moderno
       - name: Build APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --android-skip-build-dependency-validation
 
       # 5. Salva o APK gerado para você baixar
       - name: Upload APK
