@@ -25,29 +25,38 @@ jobs:
           
           echo "Gerando nova estrutura Android compatível..."
           cd ..
-          # Cria um projeto temporário com nome em minúsculo para o Flutter aceitar
           flutter create --platforms=android runtv_player
           
           echo "Movendo a pasta android corrigida para o repositório..."
           mv runtv_player/android RunTVPlayer/
           cd RunTVPlayer
 
-      # 4. Ajusta o wakelock_plus para uma versão compatível com o Dart 3.2.6
+      # 4. Corrige as incompatibilidades de código Dart automaticamente
+      - name: Corrigir Código Dart Antigo
+        run: |
+          echo "Ajustando chamadas obsoletas do player_manager.dart..."
+          # Comenta as linhas do setProperty que geram erro no media_kit antigo
+          sed -i 's/await player.setProperty/\/\/ await player.setProperty/g' lib/managers/player_manager.dart
+          
+          echo "Ajustando propriedades ausentes do layout_picker_screen.dart..."
+          # Ajusta a comparação de layout removendo a propriedade ausente 'isSelected'
+          sed -i 's/old.isSelected != isSelected/old.mode != mode/g' lib/screens/layout_picker_screen.dart
+
+      # 5. Ajusta o wakelock_plus para uma versão compatível com o Dart 3.2.6
       - name: Ajustar dependência do Wakelock
         run: flutter pub add wakelock_plus:1.1.4 --offline
 
-      # 5. Baixa as dependências do pubspec
+      # 6. Baixa as dependências do pubspec
       - name: Install dependencies
         run: flutter pub get
 
-      # 6. Compila o APK usando o comando limpo compatível com Flutter 3.16
+      # 7. Compila o APK usando o comando limpo compatível com Flutter 3.16
       - name: Build APK
         run: flutter build apk --debug
 
-      # 7. Salva o APK gerado para você baixar
+      # 8. Salva o APK gerado para você baixar
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: build/app/outputs/flutter-apk/*.apk
-
