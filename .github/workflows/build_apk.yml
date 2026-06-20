@@ -17,19 +17,39 @@ jobs:
         with:
           flutter-version: '3.16.9'
 
-      # 3. Ajusta o wakelock_plus para uma versão compatível com o Dart 3.2.6
+      # 3. Corrige o arquivo do Android para usar o Embedding V2 exigido pelo Media Kit
+      - name: Migrar para Android Embedding V2
+        run: |
+          cd android/app/src/main/kotlin
+          # Procura e entra na pasta do seu pacote dinamicamente
+          PACKAGE_DIR=$(find . -name "MainActivity.kt" -exec dirname {} \;)
+          if [ -n "$PACKAGE_DIR" ]; then
+            cd "$PACKAGE_DIR"
+            echo "Migrando MainActivity.kt..."
+            cat << 'EOF' > MainActivity.kt
+          package com.example.runtv_player
+
+          import io.flutter.embedding.android.FlutterActivity
+
+          class MainActivity: FlutterActivity() {
+          }
+          EOF
+          fi
+        continue-on-error: true
+
+      # 4. Ajusta o wakelock_plus para uma versão compatível com o Dart 3.2.6
       - name: Ajustar dependência do Wakelock
         run: flutter pub add wakelock_plus:1.1.4 --offline
 
-      # 4. Baixa as dependências do pubspec
+      # 5. Baixa as dependências do pubspec
       - name: Install dependencies
         run: flutter pub get
 
-      # 5. Compila o APK pulando validações rígidas de Gradle moderno
+      # 6. Compila o APK pulando validações rígidas de Gradle moderno
       - name: Build APK
         run: flutter build apk --debug --android-skip-build-dependency-validation
 
-      # 6. Salva o APK gerado para você baixar
+      # 7. Salva o APK gerado para você baixar
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
