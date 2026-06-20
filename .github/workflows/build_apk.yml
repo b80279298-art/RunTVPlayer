@@ -17,12 +17,20 @@ jobs:
         with:
           flutter-version: '3.16.9'
 
-      # 3. Força a migração do Android embedding para V2 recriando os arquivos principais
-      - name: Migrar na Força para Android Embedding V2
+      # 3. Remove os metadados do Embedding V1 e força o V2 no AndroidManifest e nas classes
+      - name: Forçar Android Embedding V2 Completo
         run: |
-          echo "Limpando estruturas antigas e criando arquivos compatíveis com v2..."
+          echo "Atualizando AndroidManifest.xml..."
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           
-          # Garante que a pasta kotlin existe e cria uma MainActivity universal
+          if [ -f "$MANIFEST_PATH" ]; then
+            # Remove a tag antiga do Flutter Embedding V1 que bloqueia o Media Kit
+            sed -i '/android:name="io.flutter.app.FlutterApplication"/d' "$MANIFEST_PATH"
+            sed -i '/android:name="io.flutter.embedding.android.SplashScreenDrawable"/d' "$MANIFEST_PATH"
+          fi
+
+          echo "Recriando caminhos das atividades..."
+          # Garante que as pastas corretas existam e injeta as MainActivities limpas no formato V2
           mkdir -p android/app/src/main/kotlin/com/example/runtv_player
           cat << 'EOF' > android/app/src/main/kotlin/com/example/runtv_player/MainActivity.kt
           package com.example.runtv_player
@@ -33,7 +41,6 @@ jobs:
           }
           EOF
 
-          # Garante que se houver uma versão em Java antiga, ela não vai conflitar
           mkdir -p android/app/src/main/java/com/example/runtv_player
           cat << 'EOF' > android/app/src/main/java/com/example/runtv_player/MainActivity.java
           package com.example.runtv_player;
