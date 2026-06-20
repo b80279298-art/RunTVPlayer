@@ -17,12 +17,20 @@ jobs:
         with:
           flutter-version: '3.16.9'
 
-      # 3. Reconstrói a pasta Android do zero no padrão moderno (V2)
+      # 3. Reconstrói a pasta Android do zero contornando o erro de nome de pacote
       - name: Recriar estrutura Android Limpa
         run: |
-          echo "Deletando pasta antiga e gerando uma nova com suporte nativo a V2..."
+          echo "Deletando pasta antiga..."
           rm -rf android
-          flutter create . --platforms=android
+          
+          echo "Gerando nova estrutura Android compatível..."
+          cd ..
+          # Cria um projeto temporário com nome em minúsculo para o Flutter aceitar
+          flutter create --platforms=android runtv_player
+          
+          echo "Movendo a pasta android corrigida para o repositório..."
+          mv runtv_player/android RunTVPlayer/
+          cd RunTVPlayer
 
       # 4. Ajusta o wakelock_plus para uma versão compatível com o Dart 3.2.6
       - name: Ajustar dependência do Wakelock
