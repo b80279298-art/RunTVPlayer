@@ -35,21 +35,22 @@ class _PipWidgetState extends State<PipWidget>
   late AnimationController _entryAnim;
   late Animation<double> _scaleAnim;
   late Animation<double> _opacityAnim;
-  double _currentScale = 1.0;
-  double _startScale = 1.0;
+  
+  // Controle local do tamanho da minitela (começa em 0.30 do tamanho da tela)
+  double _sizeFraction = 0.30; 
 
   @override
   void initState() {
     super.initState();
     _entryAnim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 300),
     );
-    _scaleAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _entryAnim, curve: Curves.elasticOut),
+    _scaleAnim = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _entryAnim, curve: Curves.easeOut),
     );
     _opacityAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _entryAnim, curve: const Interval(0.0, 0.5)),
+      CurvedAnimation(parent: _entryAnim, curve: const Interval(0.0, 1.0)),
     );
     _entryAnim.forward();
   }
@@ -61,18 +62,18 @@ class _PipWidgetState extends State<PipWidget>
   }
 
   Offset _positionForConfig(SlotConfig config, Size pipSize) {
-    const margin = 12.0;
-    switch (config.pipPosition ?? PipPosition.bottomRight) {
+    const margin = 16.0;
+    switch (config.pipPosition ?? PipPosition.topRight) {
       case PipPosition.topLeft:
         return const Offset(margin, margin);
       case PipPosition.topRight:
         return Offset(widget.screenSize.width - pipSize.width - margin, margin);
       case PipPosition.bottomLeft:
-        return Offset(margin, widget.screenSize.height - pipSize.height - margin - 56);
+        return Offset(margin, widget.screenSize.height - pipSize.height - margin);
       case PipPosition.bottomRight:
         return Offset(
           widget.screenSize.width - pipSize.width - margin,
-          widget.screenSize.height - pipSize.height - margin - 56,
+          widget.screenSize.height - pipSize.height - margin,
         );
     }
   }
@@ -80,41 +81,95 @@ class _PipWidgetState extends State<PipWidget>
   @override
   Widget build(BuildContext context) {
     final lm = context.watch<LayoutManager>();
-    final fraction = widget.config.pipFraction.clamp(0.15, 0.45);
-    final pipW = widget.screenSize.width * fraction * _currentScale;
-    final pipH = pipW * (9 / 16);
+    
+    // Calcula a largura da minitela baseada no tamanho da tela do celular
+    final pipW = widget.screenSize.width * _sizeFraction;
+    final pipH = pipW * (9 / 16); // Mantém a proporção de TV (16:9)
     final pipSize = Size(pipW, pipH);
     final offset = _positionForConfig(widget.config, pipSize);
 
-    return FadeTransition(
-      opacity: _opacityAnim,
-      child: ScaleTransition(
-        scale: _scaleAnim,
-        child: Positioned(
-          left: offset.dx,
-          top: offset.dy,
-          child: GestureDetector(
-            onScaleStart: (details) {
-              _startScale = _currentScale;
-            },
-            onScaleUpdate: (details) {
-              if (details.pointerCount == 2) {
-                final newScale = (_startScale * details.scale).clamp(0.5, 1.5);
-                setState(() => _currentScale = newScale);
-                final newFraction = (fraction * details.scale).clamp(0.15, 0.45);
-                lm.setPipFraction(widget.slotIndex, newFraction);
-              }
-            },
-            child: PlayerWidget(
-              slotId: widget.config.slotId,
-              isMain: false,
-              onTap: widget.onTap,
-              onDoubleTap: widget.onDoubleTap,
-              onLongPress: widget.onLongPress,
-              isSwapping: widget.isSwapping,
-            ),
+    // CRITICAL: O Positioned DEVE ser o elemento mais externo para o Stack funcionar
+    return Positioned(
+      left: offset.dx,
+      top: offset.dy,
+      width: pipSize.width,
+      height: pipSize.height,
+      child: FadeTransition(
+        opacity: _opacityAnim,
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: Stack(
+            children: [
+              // O Player de vídeo da mini-tela
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.purple, width: 2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black54,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: PlayerWidget(
+                    slotId: widget.config.slotId,
+                    isMain: false,
+                    onTap: widget.onTap,
+                    onDoubleTap: widget.onDoubleTap,
+                    onLongPress: widget.onLongPress,
+                    isSwapping: widget.isSwapping,
+                  ),
+                ),
+              ),
+
+              // Botões discretos de controle de tamanho (+ e -) no topo da minitela
+              Positioned(
+                bottom: 4,
+                left: 4,
+                child: Row(
+                  children: [
+                    _buildZoomButton(
+                      icon: Icons.remove,
+                      onPressed: () {
+                        setState(() {
+                          _sizeFraction = (_sizeFraction - 0.05).clamp(0.18, 0.45);
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    _buildZoomButton(
+                      icon: Icons.add,
+                      onPressed: () {
+                        setState(() {
+                          _sizeFraction = (_sizeFraction + 0.05).clamp(0.18, 0.45);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildZoomButton({required IconData icon, required VoidCallback onPressed}) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.black70,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Icon(icon, color: Colors.white, size: 16),
       ),
     );
   }
