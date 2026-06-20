@@ -16,6 +16,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Instalar Gradle e Criar Wrapper
+        run: |
+          sudo apt-get install -y gradle
+          cd android
+          gradle wrapper
+
       - name: Grant execute permission for gradlew
         run: cd android && chmod +x gradlew
 
