@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../managers/layout_manager.dart';
@@ -36,8 +37,9 @@ class _PipWidgetState extends State<PipWidget>
   late Animation<double> _scaleAnim;
   late Animation<double> _opacityAnim;
   
-  // Controle local do tamanho da minitela (começa em 0.30 do tamanho da tela)
   double _sizeFraction = 0.30; 
+  bool _showPipControls = false; // Controla se a borda e botões aparecem
+  Timer? _hideTimer;
 
   @override
   void initState() {
@@ -58,7 +60,39 @@ class _PipWidgetState extends State<PipWidget>
   @override
   void dispose() {
     _entryAnim.dispose();
+    _hideTimer?.cancel();
     super.dispose();
+  }
+
+  // Ativa os controles e inicia o cronômetro para sumirem em 3 segundos
+  void _togglePipControls() {
+    setState(() {
+      _showPipControls = !_showPipControls;
+    });
+    
+    _hideTimer?.cancel();
+    if (_showPipControls) {
+      _hideTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() => _showPipControls = false);
+        }
+      });
+    }
+  }
+
+  // Abre o menu para trocar a minitela de canto ao segurar o dedo
+  void _openPositionMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => PipPositionMenu(
+        slotIndex: widget.slotIndex,
+        onClose: () => Navigator.pop(ctx),
+      ),
+    );
   }
 
   Offset _positionForConfig(SlotConfig config, Size pipSize) {
@@ -82,13 +116,11 @@ class _PipWidgetState extends State<PipWidget>
   Widget build(BuildContext context) {
     final lm = context.watch<LayoutManager>();
     
-    // Calcula a largura da minitela baseada no tamanho da tela do celular
     final pipW = widget.screenSize.width * _sizeFraction;
-    final pipH = pipW * (9 / 16); // Mantém a proporção de TV (16:9)
+    final pipH = pipW * (9 / 16); 
     final pipSize = Size(pipW, pipH);
     final offset = _positionForConfig(widget.config, pipSize);
 
-    // CRITICAL: O Positioned DEVE ser o elemento mais externo para o Stack funcionar
     return Positioned(
       left: offset.dx,
       top: offset.dy,
@@ -98,75 +130,89 @@ class _PipWidgetState extends State<PipWidget>
         opacity: _opacityAnim,
         child: ScaleTransition(
           scale: _scaleAnim,
-          child: Stack(
-            children: [
-              // O Player de vídeo da mini-tela
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.purple, width: 2),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black54,
-                        blurRadius: 10,
-                        offset: Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: PlayerWidget(
-                    slotId: widget.config.slotId,
-                    isMain: false,
-                    onTap: widget.onTap,
-                    onDoubleTap: widget.onDoubleTap,
-                    onLongPress: widget.onLongPress,
-                    isSwapping: widget.isSwapping,
+          child: GestureDetector(
+            onTap: _togglePipControls, // Clique simples: mostra/esconde bordas e botões
+            onDoubleTap: () {
+              // Clique duplo: alterna/inverte os canais entre tela grande e pequena
+              lm.swapMainWith(widget.slotIndex);
+            },
+            onLongPress: _openPositionMenu, // Clique longo: abre menu para mudar de canto
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      // A borda roxa só existe visualmente se _showPipControls for verdadeiro
+                      border: Border.all(
+                        color: _showPipControls ? AppColors.purple : Colors.transparent, 
+                        width: 2,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black54,
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        )
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: IgnorePointer(
+                      // Bloqueia cliques internos no player para o GestureDetector de fora capturar o toque
+                      child: PlayerWidget(
+                        slotId: widget.config.slotId,
+                        isMain: false,
+                        isSwapping: widget.isSwapping,
+                      ),
+                    ),
                   ),
                 ),
-              ),
 
-              // Botões discretos de controle de tamanho (+ e -) no topo da minitela
-              Positioned(
-                bottom: 4,
-                left: 4,
-                child: Row(
-                  children: [
-                    _buildZoomButton(
-                      icon: Icons.remove,
-                      onPressed: () {
-                        setState(() {
-                          _sizeFraction = (_sizeFraction - 0.05).clamp(0.18, 0.45);
-                        });
-                      },
+                // Os botões de zoom (+ e -) agora obedecem à visibilidade dinâmica
+                if (_showPipControls)
+                  Positioned(
+                    bottom: 6,
+                    left: 6,
+                    child: Row(
+                      children: [
+                        _buildZoomButton(
+                          icon: Icons.remove,
+                          onPressed: () {
+                            setState(() {
+                              _sizeFraction = (_sizeFraction - 0.05).clamp(0.18, 0.45);
+                            });
+                            _togglePipControls(); // Reseta o cronômetro para não sumir enquanto clica
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                        _buildZoomButton(
+                          icon: Icons.add,
+                          onPressed: () {
+                            setState(() {
+                              _sizeFraction = (_sizeFraction + 0.05).clamp(0.18, 0.45);
+                            });
+                            _togglePipControls(); // Reseta o cronômetro para não sumir enquanto clica
+                          },
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    _buildZoomButton(
-                      icon: Icons.add,
-                      onPressed: () {
-                        setState(() {
-                          _sizeFraction = (_sizeFraction + 0.05).clamp(0.18, 0.45);
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-    Widget _buildZoomButton({required IconData icon, required VoidCallback onPressed}) {
+  Widget _buildZoomButton({required IconData icon, required VoidCallback onPressed}) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Colors.black54, // Corrigido para um padrão que o Flutter antigo aceita
-          borderRadius: BorderRadius.circular(6),
+          color: Colors.black80,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.white24),
         ),
         child: Icon(icon, color: Colors.white, size: 16),
