@@ -143,16 +143,16 @@ class _PipWidgetState extends State<PipWidget>
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      // A borda roxa só existe visualmente se _showPipControls for verdadeiro
+                      // ALTERADO: Se os controles sumirem, a borda roxa fica com tamanho zero e invisível por completo
                       border: Border.all(
                         color: _showPipControls ? AppColors.purple : Colors.transparent, 
-                        width: 2,
+                        width: _showPipControls ? 2.0 : 0.0,
                       ),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Colors.black54,
+                          color: Colors.black.withOpacity(0.4),
                           blurRadius: 10,
-                          offset: Offset(0, 4),
+                          offset: const Offset(0, 4),
                         )
                       ],
                     ),
@@ -205,13 +205,13 @@ class _PipWidgetState extends State<PipWidget>
     );
   }
 
-    Widget _buildZoomButton({required IconData icon, required VoidCallback onPressed}) {
+  Widget _buildZoomButton({required IconData icon, required VoidCallback onPressed}) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Colors.black54, // Corrigido aqui também para o Flutter antigo aceitar!
+          color: Colors.black54, 
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.white24),
         ),
