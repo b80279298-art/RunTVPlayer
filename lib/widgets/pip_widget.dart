@@ -205,13 +205,13 @@ class _PipWidgetState extends State<PipWidget>
     );
   }
 
-  Widget _buildZoomButton({required IconData icon, required VoidCallback onPressed}) {
+    Widget _buildZoomButton({required IconData icon, required VoidCallback onPressed}) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Colors.black80,
+          color: Colors.black54, // Corrigido aqui também para o Flutter antigo aceitar!
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.white24),
         ),
