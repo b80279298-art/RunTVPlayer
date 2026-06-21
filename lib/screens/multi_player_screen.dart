@@ -30,17 +30,22 @@ class _MultiPlayerScreenState extends State<MultiPlayerScreen>
   void initState() {
     super.initState();
     WakelockPlus.enable();
+    
+    // ALTERADO: Força a tela deitada e ativa o modo imersivo total (esconde relógio, bateria e docks)
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
-      DeviceOrientation.portraitUp,
     ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   @override
   void dispose() {
     WakelockPlus.disable();
+    
+    // ALTERADO: Devolve o comportamento padrão ao sair do player (tela em pé com as barras do Android visíveis)
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
@@ -400,97 +405,3 @@ class _SlotMenuSheetState extends State<_SlotMenuSheet> {
               style: const TextStyle(
                 color: AppColors.onBackground,
                 fontWeight: FontWeight.w700,
-                fontSize: 17,
-              ),
-            ),
-            Text(
-              widget.stream!.url,
-              style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 16),
-          ],
-          Row(
-            children: [
-              const Icon(Icons.volume_up, color: AppColors.purple, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Slider(
-                  value: _volume,
-                  onChanged: (v) {
-                    setState(() => _volume = v);
-                    widget.onVolumeChange(v);
-                  },
-                  min: 0,
-                  max: 1,
-                  divisions: 20,
-                ),
-              ),
-              Text(
-                '${(_volume * 100).round()}%',
-                style: const TextStyle(color: AppColors.onSurface, fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Divider(color: AppColors.divider),
-          const SizedBox(height: 8),
-          _MenuItem(
-            icon: Icons.link,
-            label: 'Alterar URL',
-            onTap: widget.onChangeUrl,
-          ),
-          if (!widget.isMain)
-            _MenuItem(
-              icon: Icons.push_pin_outlined,
-              label: widget.slotIndex < context.read<LayoutManager>().slots.length
-                  ? (context.read<LayoutManager>().slots[widget.slotIndex].isPinned ? 'Desafixar' : 'Fixar posição')
-                  : 'Fixar posição',
-              onTap: widget.onPinToggle,
-            ),
-          _MenuItem(
-            icon: Icons.close,
-            label: 'Fechar transmissão',
-            textColor: AppColors.error,
-            iconColor: AppColors.error,
-            onTap: widget.onClose,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MenuItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color? textColor;
-  final Color? iconColor;
-
-  const _MenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.textColor,
-    this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: iconColor ?? AppColors.purple, size: 20),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: textColor ?? AppColors.onSurface,
-          fontSize: 15,
-        ),
-      ),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    );
-  }
-}
